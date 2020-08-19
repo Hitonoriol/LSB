@@ -15,6 +15,17 @@ public class LSB {
 	static final int RGBA = 4; // Number of RGBA entries
 	static final int HEADER_LENGTH = 64; // Header length in bits
 
+	static private int setLSB(int a, boolean bit) { // Sets the Least Significant Bit of <a> to <bit>
+		if (a % 2 != (bit ? 1 : 0)) {
+			if (a % 2 == 0)
+				a += 1;
+			else
+				a -= 1;
+		}
+
+		return a;
+	}
+
 	static byte[] lsbDecode(File encodedFile) throws IOException {
 		BufferedImage encodedImage = ImageIO.read(encodedFile);
 		int x = 0, y = 0;
@@ -37,11 +48,11 @@ public class LSB {
 			x = 0;
 			y++;
 		}
-		long secretLen = Utils.decode8((bits.get(0, 64)).toByteArray());
+		long secretLen = Utils.decode8((bits.get(0, HEADER_LENGTH)).toByteArray());
 
 		Utils.out("Embedded file length: " + secretLen + " bytes");
 
-		return (bits.get(64, (int) (secretLen * BYTE + BYTE * BYTE))).toByteArray();
+		return (bits.get(HEADER_LENGTH, (int) (secretLen * BYTE + BYTE * BYTE))).toByteArray();
 	}
 
 	static BufferedImage lsbEncode(File coverFile, File secretFile) throws IOException {
@@ -70,31 +81,12 @@ public class LSB {
 			while (x < coverImage.getWidth()) {
 				color = new Color(coverImage.getRGB(x, y));
 
-				r = color.getRed();
-				if (r % 2 != (secret.get(i) ? 1 : 0)) {
-					if (r % 2 == 0)
-						r += 1;
-					else
-						r -= 1;
-				}
-
-				g = color.getGreen();
-				if (g % 2 != (secret.get(++i) ? 1 : 0)) {
-					if (g % 2 == 0)
-						g += 1;
-					else
-						g -= 1;
-				}
-
-				b = color.getBlue();
-				if (b % 2 != (secret.get(++i) ? 1 : 0)) {
-					if (b % 2 == 0)
-						b += 1;
-					else
-						b -= 1;
-				}
+				r = setLSB(color.getRed(), secret.get(i));
+				g = setLSB(color.getGreen(), secret.get(++i));
+				b = setLSB(color.getBlue(), secret.get(++i));
 
 				coverImage.setRGB(x, y, new Color(r, g, b).getRGB());
+
 				x++;
 				i++;
 
@@ -102,6 +94,7 @@ public class LSB {
 					Utils.out("Stopping at pixel " + x + ", " + y);
 					return coverImage;
 				}
+
 			}
 			x = 0;
 			y++;
